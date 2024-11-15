@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文本提取器</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src='https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+    <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <button id="themeToggle" class="theme-toggle">
+            <svg class="sun-icon" viewBox="0 0 24 24" width="24" height="24">
+                <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 000-1.41l-1.06-1.06zm1.06-10.96a.996.996 0 000-1.41.996.996 0 00-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36a.996.996 0 000-1.41.996.996 0 00-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/>
+            </svg>
+        </button>
+
+        <div class="upload-section">
+            <svg class="upload-icon" viewBox="0 0 24 24" width="48" height="48">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v4h3l-4 4-4-4h3z" 
+                fill="currentColor"/>
+            </svg>
+            <h1>文本提取器</h1>
+            <p class="subtitle">支持所有Office文档、PDF和图片文件</p>
+            <div class="file-limits">
+                <p>支持批量上传 | 大文件处理可能需要较长时间</p>
+            </div>
+            <input type="file" id="fileInput" accept=".doc,.docx,.ppt,.pptx,.xls,.xlsx,.pdf,.jpg,.jpeg,.png" multiple>
+            
+            <div class="start-process-container">
+                <button id="startProcess" class="button button-primary" style="display: none;">
+                    开始处理
+                </button>
+            </div>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-info">
+                    <span id="currentFile">准备处理...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-controls">
+                    <span id="batchProgress">已处理: 0/0</span>
+                    <button id="cancelProcess" class="button button-danger">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M6 6l12 12M6 18L18 6" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        终止处理
+                    </button>
+                </div>
+            </div>
+
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner"></div>
+                <p id="processingStatus">正在处理文件...</p>
+            </div>
+        </div>
+        
+        <div class="result-section" id="resultSection">
+            <div class="controls">
+                <div class="control-row">
+                    <div class="api-controls">
+                        <select id="useApi" class="select">
+                            <option value="no">不使用 API 优化</option>
+                            <option value="yes">使用 API 优化</option>
+                        </select>
+                        
+                        <div id="apiConfigSection" class="api-config" style="display: none;">
+                            <input type="password" id="apiKey" placeholder="输入 DeepSeek API Key" class="api-input" />
+                            <select id="apiModel" class="select">
+                                <option value="deepseek-chat">DeepSeek Chat</option>
+                                <option value="deepseek-coder">DeepSeek Coder</option>
+                            </select>
+                            <button id="saveApiKey" class="button">保存 API 配置</button>
+                        </div>
+                    </div>
+
+                    <div class="format-controls">
+                        <select id="exportFormat" class="select">
+                            <option value="text">纯文本</option>
+                            <option value="markdown">Markdown</option>
+                            <option value="html">HTML</option>
+                        </select>
+                        <select id="textFormat" class="select">
+                            <option value="normal">普通格式</option>
+                            <option value="compact">紧凑格式</option>
+                            <option value="structured">结构化格式</option>
+                        </select>
+                        <select id="language" class="select">
+                            <option value="eng+chi_sim">中英文</option>
+                            <option value="eng">英文</option>
+                            <option value="chi_sim">中文</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="action-controls">
+                    <button id="startProcess" class="button button-primary">开始处理</button>
+                    <button id="previewBtn" class="button">预览</button>
+                    <button id="copyAll" class="button">复制全部</button>
+                    <button id="downloadBtn" class="button">下载文件</button>
+                    <button id="compressBtn" class="button">压缩下载</button>
+                </div>
+            </div>
+
+            <div id="previewModal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <div id="previewContent"></div>
+                </div>
+            </div>
+
+            <div class="result-content" id="resultContent">
+                <!-- 结果将在这里显示 -->
+            </div>
+        </div>
+
+        <div id="errorModal" class="modal">
+            <div class="modal-content error-content">
+                <span class="close">&times;</span>
+                <h2>处理出错</h2>
+                <p id="errorMessage"></p>
+            </div>
+        </div>
+    </div>
+
+    <script id="workerScript" type="javascript/worker">
+        // Web Worker 代码将在script.js中定义
+    </script>
+    <script src="script.js"></script>
+</body>
+</html> 

@@ -1,0 +1,22 @@
+# 创建并编辑 .gitignore 文件
+echo "# 依赖
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 环境变量
+.env
+.env.local
+
+# 日志
+*.log
+
+# 临时文件
+tmp/
+temp/" > .gitignore
